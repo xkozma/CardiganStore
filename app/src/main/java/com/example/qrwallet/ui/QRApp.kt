@@ -6,15 +6,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -40,31 +44,68 @@ fun QRApp(
     val pendingCard by viewModel.newCardDraft.collectAsState()
     val pendingImportCards by viewModel.pendingImportCards.collectAsState()
     var showWalletShare by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredCards = remember(cards, searchQuery) {
+        val q = searchQuery.trim().lowercase()
+        if (q.isEmpty()) cards else cards.filter { card ->
+            (card.title ?: "").lowercase().contains(q) || (card.code ?: "").lowercase().contains(q)
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                backgroundColor = Color(0xFF101828),
-                title = { Text("My Wallet", color = Color.White) },
+                backgroundColor = Color(0xFF0F172A),
+                title = {
+                    Text(
+                        "My Wallet",
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 22.sp
+                    )
+                },
                 actions = {
-                    TextButton(onClick = { showWalletShare = cards.isNotEmpty() }) { Text("Share wallet", color = Color.White) }
-                    TextButton(onClick = onBackup) { Text("Backup", color = Color.White) }
-                    TextButton(onClick = onRestore) { Text("Restore", color = Color.White) }
-                }
+                    TextButton(
+                        onClick = { showWalletShare = filteredCards.isNotEmpty() },
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .background(Color.White.copy(alpha = 0.08f), shape = RoundedCornerShape(12.dp))
+                    ) {
+                        Text("Share wallet", color = Color.White, fontWeight = FontWeight.Medium)
+                    }
+                },
+                elevation = 0.dp
             )
         },
         floatingActionButton = {
-            Row(modifier = Modifier.padding(end = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                modifier = Modifier.padding(end = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 FloatingActionButton(
                     backgroundColor = Color(0xFF2E5BFF),
                     contentColor = Color.White,
-                    onClick = onScan
-                ) { Text("Scan card") }
+                    onClick = onScan,
+                    modifier = Modifier.size(62.dp),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Scan", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("QR", fontSize = 10.sp)
+                    }
+                }
                 FloatingActionButton(
                     backgroundColor = Color(0xFF14B8A6),
                     contentColor = Color.White,
-                    onClick = onPickImage
-                ) { Text("Import QR") }
+                    onClick = onPickImage,
+                    modifier = Modifier.size(62.dp),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Import", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("File", fontSize = 10.sp)
+                    }
+                }
             }
         },
         backgroundColor = Color(0xFFF3F4F6)
@@ -88,15 +129,46 @@ fun QRApp(
                     }
                 }
             } else {
-                CardList(
-                    cards = cards,
-                    onClick = { card -> viewModel.selectCard(card) },
-                    onDelete = { card ->
-                        viewModel.selectCard(null)
-                        viewModel.delete(card)
-                    },
-                    onReplace = onPickImage
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        label = { Text("Search cards") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                            backgroundColor = Color.White,
+                            focusedBorderColor = Color(0xFF2E5BFF),
+                            unfocusedBorderColor = Color(0xFFE2E8F0)
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (filteredCards.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("No cards match your search", color = Color.Gray, fontSize = 18.sp)
+                        }
+                    } else {
+                        CardList(
+                            cards = filteredCards,
+                            onClick = { card -> viewModel.selectCard(card) },
+                            onDelete = { card ->
+                                viewModel.selectCard(null)
+                                viewModel.delete(card)
+                            },
+                            onReplace = onPickImage
+                        )
+                    }
+                }
             }
 
             pendingCard?.let { draft ->
@@ -149,10 +221,11 @@ fun QRApp(
 @Composable
 fun CardList(cards: List<Card>, onClick: (Card) -> Unit, onDelete: (Card) -> Unit, onReplace: () -> Unit) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(bottom = 88.dp)
     ) {
-        items(cards) { card ->
+        items(cards, key = { it.id }) { card ->
             CardRow(card = card, onClick = onClick, onDelete = onDelete, onReplace = onReplace)
         }
     }
@@ -162,36 +235,58 @@ fun CardList(cards: List<Card>, onClick: (Card) -> Unit, onDelete: (Card) -> Uni
 fun CardRow(card: Card, onClick: (Card) -> Unit, onDelete: (Card) -> Unit, onReplace: () -> Unit) {
     var showMenu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    val palette = getCardPalette(card.title ?: "My Card")
 
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick(card) },
-        shape = MaterialTheme.shapes.medium,
-        elevation = 6.dp,
-        backgroundColor = Color.White
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(170.dp)
+            .clickable { onClick(card) },
+        shape = RoundedCornerShape(24.dp),
+        elevation = 8.dp,
+        backgroundColor = Color.Transparent
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(Brush.horizontalGradient(listOf(Color(0xFF0F172A), Color(0xFF1E293B))))
-                .padding(16.dp)
+                .fillMaxSize()
+                .background(Brush.linearGradient(palette))
+                .padding(20.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (card.imagePath != null) {
-                    AsyncImage(
-                        model = card.imagePath,
-                        contentDescription = "card image",
-                        modifier = Modifier.size(72.dp),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    val bmp = generateCardBitmap(card, 128)
-                    bmp?.let {
-                        Image(
-                            bitmap = it.asImageBitmap(),
-                            contentDescription = if (card.format == "BARCODE") "barcode" else "qr code",
-                            modifier = Modifier.size(72.dp),
-                            contentScale = ContentScale.Fit
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(Color.White.copy(alpha = 0.08f))
+            )
+
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(68.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Color.White.copy(alpha = 0.16f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (card.imagePath != null) {
+                        AsyncImage(
+                            model = card.imagePath,
+                            contentDescription = "card image",
+                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp)),
+                            contentScale = ContentScale.Crop
                         )
+                    } else {
+                        val bmp = generateCardBitmap(card, 96)
+                        bmp?.let {
+                            Image(
+                                bitmap = it.asImageBitmap(),
+                                contentDescription = if (card.format == "BARCODE") "barcode" else "qr code",
+                                modifier = Modifier.size(48.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
                     }
                 }
 
@@ -201,19 +296,32 @@ fun CardRow(card: Card, onClick: (Card) -> Unit, onDelete: (Card) -> Unit, onRep
                     Text(
                         text = card.title ?: "My Card",
                         color = Color.White,
-                        fontSize = 22.sp,
+                        fontSize = 28.sp,
                         fontWeight = FontWeight.Bold
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Surface(
+                        color = Color.White.copy(alpha = 0.14f),
+                        shape = RoundedCornerShape(999.dp)
+                    ) {
+                        Text(
+                            text = (card.format ?: "QR").uppercase(),
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = card.code?.take(30) ?: "No code",
+                        text = card.code?.take(26) ?: "No code",
                         color = Color(0xFFE2E8F0),
-                        maxLines = 1
+                        maxLines = 1,
+                        fontSize = 14.sp
                     )
                 }
 
                 Box {
-                    IconButton(onClick = { showMenu = true }) {
+                    IconButton(onClick = { showMenu = true }, modifier = Modifier.background(Color.White.copy(alpha = 0.08f), shape = CircleShape)) {
                         Text("⋮", color = Color.White, fontSize = 22.sp)
                     }
 
@@ -539,6 +647,21 @@ fun ShareWalletDialog(cards: List<Card>, onDismiss: () -> Unit, onShare: (List<C
             }
         }
     }
+}
+
+private fun getCardPalette(title: String): List<Color> {
+    val palettes = listOf(
+        listOf(Color(0xFF1D4ED8), Color(0xFF7C3AED)),
+        listOf(Color(0xFF0EA5E9), Color(0xFF14B8A6)),
+        listOf(Color(0xFFEA580C), Color(0xFFF59E0B)),
+        listOf(Color(0xFF22C55E), Color(0xFF059669)),
+        listOf(Color(0xFFEC4899), Color(0xFF8B5CF6)),
+        listOf(Color(0xFFF97316), Color(0xFFEF4444))
+    )
+    val hash = title.hashCode()
+    val safeHash = if (hash < 0) -hash else hash
+    val index = safeHash % palettes.size
+    return palettes[index]
 }
 
 private data class WalletSharePayload(

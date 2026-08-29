@@ -261,6 +261,17 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        val normalizedExistingCode = trimmed.lowercase()
+        val alreadyExists = viewModel.allCards.value.any { card ->
+            card.code?.trim()?.lowercase() == normalizedExistingCode
+        }
+
+        if (alreadyExists) {
+            viewModel.discardQueuedCard()
+            Toast.makeText(this, "You already have this card in your wallet.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         viewModel.queueNewCard(trimmed, defaultTitle = "Scanned Card", format = format)
     }
 
