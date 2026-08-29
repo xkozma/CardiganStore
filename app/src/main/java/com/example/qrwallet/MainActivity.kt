@@ -22,6 +22,7 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import com.example.qrwallet.data.AppDatabase
@@ -57,14 +58,33 @@ class MainActivity : AppCompatActivity() {
             .get(com.example.qrwallet.viewmodel.CardViewModel::class.java)
 
         setContent {
-            QRApp(
-                viewModel = viewModel,
-                onScan = { startCameraScan() },
-                onPickImage = { pickImage() },
-                onBackup = { startExport() },
-                onRestore = { startImport() },
-                onShareWalletQr = { cards -> shareWalletQr(cards) }
-            )
+            MaterialTheme(
+                colors = darkColors(
+                    primary = Color(0xFF7C9BFF),
+                    primaryVariant = Color(0xFF4F7CFF),
+                    secondary = Color(0xFF2DD4BF),
+                    background = Color(0xFF090F1C),
+                    surface = Color(0xFF101A2B),
+                    onPrimary = Color.White,
+                    onBackground = Color.White,
+                    onSurface = Color.White
+                ),
+                typography = Typography(
+                    h4 = androidx.compose.material.Typography().h4.copy(color = Color.White),
+                    h5 = androidx.compose.material.Typography().h5.copy(color = Color.White),
+                    body1 = androidx.compose.material.Typography().body1.copy(color = Color(0xFFE2E8F0)),
+                    body2 = androidx.compose.material.Typography().body2.copy(color = Color(0xFFE2E8F0))
+                )
+            ) {
+                QRApp(
+                    viewModel = viewModel,
+                    onScan = { startCameraScan() },
+                    onPickImage = { pickImage() },
+                    onBackup = { startExport() },
+                    onRestore = { startImport() },
+                    onShareWalletQr = { cards -> shareWalletQr(cards) }
+                )
+            }
         }
     }
 

@@ -1,5 +1,6 @@
 package com.example.qrwallet.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,6 +23,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.example.qrwallet.data.Card
 import com.example.qrwallet.viewmodel.CardViewModel
@@ -55,85 +57,115 @@ fun QRApp(
     Scaffold(
         topBar = {
             TopAppBar(
-                backgroundColor = Color(0xFF0F172A),
+                backgroundColor = Color(0xFF0B1020),
                 title = {
-                    Text(
-                        "My Wallet",
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 22.sp
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "My Wallet",
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 22.sp
+                        )
+                    }
                 },
                 actions = {
-                    TextButton(
-                        onClick = { showWalletShare = filteredCards.isNotEmpty() },
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .background(Color.White.copy(alpha = 0.08f), shape = RoundedCornerShape(12.dp))
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color.White.copy(alpha = 0.08f),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                        modifier = Modifier.defaultMinSize(minWidth = 96.dp, minHeight = 38.dp)
                     ) {
-                        Text("Share wallet", color = Color.White, fontWeight = FontWeight.Medium)
+                        TextButton(
+                            onClick = { showWalletShare = filteredCards.isNotEmpty() },
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp)
+                        ) {
+                            Text("Share", color = Color.White, fontWeight = FontWeight.Medium)
+                        }
                     }
                 },
                 elevation = 0.dp
             )
         },
-        floatingActionButton = {
-            Row(
-                modifier = Modifier.padding(end = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                FloatingActionButton(
-                    backgroundColor = Color(0xFF2E5BFF),
-                    contentColor = Color.White,
-                    onClick = onScan,
-                    modifier = Modifier.size(62.dp),
-                    shape = RoundedCornerShape(18.dp)
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Scan", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Text("QR", fontSize = 10.sp)
-                    }
-                }
-                FloatingActionButton(
-                    backgroundColor = Color(0xFF14B8A6),
-                    contentColor = Color.White,
-                    onClick = onPickImage,
-                    modifier = Modifier.size(62.dp),
-                    shape = RoundedCornerShape(18.dp)
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Import", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Text("File", fontSize = 10.sp)
-                    }
-                }
-            }
-        },
-        backgroundColor = Color(0xFFF3F4F6)
+        backgroundColor = Color(0xFF0B1020)
     ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
-            if (cards.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(24.dp),
-                        backgroundColor = Color.White,
-                        elevation = 4.dp
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF0B1020),
+                            Color(0xFF111C2F),
+                            Color(0xFFF3F6FB)
+                        )
+                    )
+                )
+                .padding(padding)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 96.dp)
+            ) {
+                if (cards.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Surface(
+                            shape = RoundedCornerShape(28.dp),
+                            color = Color.White,
+                            elevation = 12.dp,
+                            modifier = Modifier.fillMaxWidth().padding(24.dp).widthIn(max = 640.dp)
                         ) {
-                            Text("No cards yet", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("Scan a QR code or import a photo to build your wallet.", color = Color.Gray)
+                            Column(
+                                modifier = Modifier.padding(28.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text("No cards yet", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Scan a QR code or import a photo to build your wallet.", color = Color(0xFF475569), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            }
                         }
                     }
-                }
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                ) {
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .widthIn(max = 680.dp)
+                    ) {
+                    Surface(
+                        shape = RoundedCornerShape(22.dp),
+                        color = Color.White.copy(alpha = 0.08f),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text("Stored cards", color = Color(0xFFCBD5E1), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(cards.size.toString(), color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = Color(0xFF7C9BFF).copy(alpha = 0.18f),
+                                modifier = Modifier.padding(2.dp)
+                            ) {
+                                Text(
+                                    text = "Ready",
+                                    color = Color(0xFFDBEAFE),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
@@ -142,31 +174,85 @@ fun QRApp(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(18.dp),
                         colors = TextFieldDefaults.outlinedTextFieldColors(
-                            backgroundColor = Color.White,
-                            focusedBorderColor = Color(0xFF2E5BFF),
-                            unfocusedBorderColor = Color(0xFFE2E8F0)
+                            textColor = Color.White,
+                            backgroundColor = Color.White.copy(alpha = 0.06f),
+                            cursorColor = Color(0xFF8AB4FF),
+                            focusedBorderColor = Color(0xFF8AB4FF),
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
+                            focusedLabelColor = Color(0xFFDBEAFE),
+                            unfocusedLabelColor = Color(0xFFCBD5E1)
                         )
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    if (filteredCards.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("No cards match your search", color = Color.Gray, fontSize = 18.sp)
+                        if (filteredCards.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("No cards match your search", color = Color(0xFFE2E8F0), fontSize = 18.sp)
+                            }
+                        } else {
+                            CardList(
+                                cards = filteredCards,
+                                onClick = { card -> viewModel.selectCard(card) },
+                                onDelete = { card ->
+                                    viewModel.selectCard(null)
+                                    viewModel.delete(card)
+                                },
+                                onReplace = onPickImage
+                            )
                         }
-                    } else {
-                        CardList(
-                            cards = filteredCards,
-                            onClick = { card -> viewModel.selectCard(card) },
-                            onDelete = { card ->
-                                viewModel.selectCard(null)
-                                viewModel.delete(card)
-                            },
-                            onReplace = onPickImage
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = onScan,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor = Color(0xFF5B6BFF),
+                            contentColor = Color.White
+                        ),
+                        elevation = ButtonDefaults.elevation(
+                            defaultElevation = 6.dp,
+                            pressedElevation = 0.dp
                         )
+                    ) {
+                        Text("Scan QR", fontWeight = FontWeight.SemiBold)
+                    }
+
+                    Button(
+                        onClick = onPickImage,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor = Color(0xFF1FB7A4),
+                            contentColor = Color.White
+                        ),
+                        elevation = ButtonDefaults.elevation(
+                            defaultElevation = 6.dp,
+                            pressedElevation = 0.dp
+                        )
+                    ) {
+                        Text("Import file", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -372,81 +458,147 @@ fun CardDetail(card: Card, onClose: () -> Unit, onDelete: (Card) -> Unit, onSave
     var title by remember { mutableStateOf(card.title ?: "") }
     var confirmDelete by remember { mutableStateOf(false) }
 
-    Dialog(onDismissRequest = onClose) {
-        Surface(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            shape = MaterialTheme.shapes.medium,
-            elevation = 8.dp
+    Dialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.45f)),
+            contentAlignment = Alignment.TopCenter
         ) {
-            Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    Box {
-                        var showMenu by remember { mutableStateOf(false) }
-                        IconButton(onClick = { showMenu = true }) {
-                            Text("⋮", fontSize = 26.sp)
-                        }
-                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                            DropdownMenuItem(onClick = {
-                                showMenu = false
-                                onReplace()
-                            }) {
-                                Text("Replace card")
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 0.dp, vertical = 0.dp)
+                    .widthIn(max = 2000.dp),
+                shape = RoundedCornerShape(28.dp),
+                color = Color(0xFF0F172A),
+                elevation = 18.dp
+            ) {
+                Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = card.title ?: "My Card", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Box {
+                            var showMenu by remember { mutableStateOf(false) }
+                            IconButton(onClick = { showMenu = true }, modifier = Modifier.background(Color.White.copy(alpha = 0.08f), shape = CircleShape)) {
+                                Text("⋮", fontSize = 24.sp, color = Color.White)
                             }
-                            DropdownMenuItem(onClick = {
-                                showMenu = false
-                                confirmDelete = true
-                            }) {
-                                Text("Delete")
+                            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                DropdownMenuItem(onClick = {
+                                    showMenu = false
+                                    onReplace()
+                                }) {
+                                    Text("Replace card")
+                                }
+                                DropdownMenuItem(onClick = {
+                                    showMenu = false
+                                    confirmDelete = true
+                                }) {
+                                    Text("Delete")
+                                }
                             }
                         }
                     }
-                }
 
-                if (card.imagePath != null) {
-                    AsyncImage(
-                        model = card.imagePath,
-                        contentDescription = "card image",
-                        modifier = Modifier.size(260.dp),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    val bmp = generateCardBitmap(card, 512)
-                    bmp?.let {
-                        Image(
-                            bitmap = it.asImageBitmap(),
-                            contentDescription = if (card.format == "BARCODE") "barcode" else "qr code",
-                            modifier = Modifier.size(260.dp),
-                            contentScale = ContentScale.Fit
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = Color.White,
+                        elevation = 10.dp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.White)
+                                .padding(horizontal = 18.dp, vertical = 20.dp)
+                        ) {
+                            if (card.imagePath != null) {
+                                AsyncImage(
+                                    model = card.imagePath,
+                                    contentDescription = "card image",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(300.dp),
+                                    contentScale = ContentScale.Fit
+                                )
+                            } else {
+                                val bmp = generateCardBitmap(card, 768)
+                                bmp?.let {
+                                    Image(
+                                        bitmap = it.asImageBitmap(),
+                                        contentDescription = if (card.format == "BARCODE") "barcode" else "qr code",
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(300.dp),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (editing) {
+                        OutlinedTextField(
+                            value = title,
+                            onValueChange = { title = it },
+                            label = { Text("Card title") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp)
                         )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                if (editing) {
-                    OutlinedTextField(
-                        value = title,
-                        onValueChange = { title = it },
-                        label = { Text("Card title") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        TextButton(onClick = { editing = false }) { Text("Cancel") }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(onClick = {
-                            onSaveTitle(card.copy(title = title.trim().ifEmpty { "My Card" }))
-                            editing = false
-                        }) { Text("Save") }
-                    }
-                } else {
-                    Text(text = card.title ?: "My Card", fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = card.code ?: "No code available", color = Color.Gray)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        Button(onClick = { editing = true }) { Text("Rename") }
-                        Button(onClick = onClose) { Text("Close") }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            TextButton(onClick = { editing = false }) { Text("Cancel", color = Color(0xFFBFDBFE)) }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    onSaveTitle(card.copy(title = title.trim().ifEmpty { "My Card" }))
+                                    editing = false
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = Color(0xFF7C9BFF),
+                                    contentColor = Color.White
+                                )
+                            ) { Text("Save") }
+                        }
+                    } else {
+                        Text(text = card.code ?: "No code available", color = Color(0xFFCBD5E1), modifier = Modifier.fillMaxWidth())
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Button(
+                                onClick = { editing = true },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = Color(0xFF1E293B),
+                                    contentColor = Color.White
+                                )
+                            ) { Text("Rename") }
+                            Button(
+                                onClick = onClose,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = Color(0xFF7C9BFF),
+                                    contentColor = Color.White
+                                )
+                            ) { Text("Close") }
+                        }
                     }
                 }
             }
@@ -478,25 +630,27 @@ fun NewCardDialog(card: Card, onDismiss: () -> Unit, onSave: (String) -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Name this card") },
+        title = { Text("Add this card") },
         text = {
             Column {
-                Text("Give this card a name so it feels like a real wallet item.")
-                Spacer(modifier = Modifier.height(12.dp))
+                Text("Give this loyalty card a quick name so it feels right in your wallet.")
+                Spacer(modifier = Modifier.height(14.dp))
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Card name") },
                     placeholder = { Text(card.title ?: "My Card") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
                 )
             }
         },
         confirmButton = {
-            Button(onClick = {
-                onSave(name)
-            }) { Text("Save card") }
+            Button(
+                onClick = { onSave(name) },
+                shape = RoundedCornerShape(12.dp)
+            ) { Text("Save card") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
@@ -573,72 +727,120 @@ fun ShareWalletDialog(cards: List<Card>, onDismiss: () -> Unit, onShare: (List<C
     val qrPayload = "walletshare:v1:" + qrJson
     val bitmap = generateQRCodeBitmap(qrPayload, 800)
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Box(
-            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f)),
-            contentAlignment = Alignment.Center
+            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)),
+            contentAlignment = Alignment.TopCenter
         ) {
             Surface(
-                shape = MaterialTheme.shapes.medium,
-                elevation = 10.dp,
+                shape = RoundedCornerShape(28.dp),
+                color = Color(0xFF0F172A),
+                elevation = 18.dp,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)
+                    .padding(horizontal = 0.dp, vertical = 0.dp)
+                    .widthIn(max = 2000.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Share wallet", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Pick the cards to include, then save or send the QR.", color = Color.Gray)
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Share wallet", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        TextButton(onClick = onDismiss) { Text("Close", color = Color(0xFFBFDBFE)) }
+                    }
 
-                    LazyColumn(modifier = Modifier.heightIn(max = 220.dp)) {
-                        items(cards.indices.toList()) { index ->
-                            val card = cards[index]
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Checkbox(
-                                    checked = selected[index] == true,
-                                    onCheckedChange = { checked -> selected[index] = checked }
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(card.title ?: "My Card")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Choose the cards to include in the shared QR.",
+                        color = Color(0xFFCBD5E1),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Surface(
+                        shape = RoundedCornerShape(18.dp),
+                        color = Color.White.copy(alpha = 0.04f),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        LazyColumn(modifier = Modifier.heightIn(max = 220.dp).padding(8.dp)) {
+                            items(cards.indices.toList()) { index ->
+                                val card = cards[index]
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 6.dp, horizontal = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = selected[index] == true,
+                                        onCheckedChange = { checked -> selected[index] = checked },
+                                        colors = CheckboxDefaults.colors(
+                                            checkedColor = Color(0xFF7C9BFF),
+                                            uncheckedColor = Color(0xFF94A3B8),
+                                            checkmarkColor = Color.White
+                                        )
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(card.title ?: "My Card", color = Color.White, fontWeight = FontWeight.Medium)
+                                }
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
                     if (bitmap != null && selectedCards.isNotEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .background(Color.White, shape = MaterialTheme.shapes.medium)
-                                .padding(12.dp)
+                        Surface(
+                            shape = RoundedCornerShape(24.dp),
+                            color = Color.White,
+                            elevation = 10.dp,
+                            modifier = Modifier.padding(8.dp)
                         ) {
-                            Image(
-                                bitmap = bitmap.asImageBitmap(),
-                                contentDescription = "wallet sharing QR",
-                                modifier = Modifier.size(260.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .background(Color.White)
+                                    .padding(18.dp)
+                            ) {
+                                Image(
+                                    bitmap = bitmap.asImageBitmap(),
+                                    contentDescription = "wallet sharing QR",
+                                    modifier = Modifier.size(240.dp)
+                                )
+                            }
                         }
                     } else {
-                        Text("Select at least one card to generate the QR.", color = Color.Gray)
+                        Text(
+                            "Select at least one card to generate the QR.",
+                            color = Color(0xFFCBD5E1),
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End
                     ) {
-                        TextButton(onClick = onDismiss) { Text("Close") }
-                        Spacer(modifier = Modifier.width(8.dp))
                         Button(
                             enabled = selectedCards.isNotEmpty(),
-                            onClick = { onShare(selectedCards) }
+                            onClick = { onShare(selectedCards) },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = Color(0xFF7C9BFF),
+                                contentColor = Color.White,
+                                disabledBackgroundColor = Color(0xFF334155),
+                                disabledContentColor = Color(0xFF94A3B8)
+                            )
                         ) {
                             Text("Save & share")
                         }
