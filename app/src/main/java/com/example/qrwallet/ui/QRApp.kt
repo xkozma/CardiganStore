@@ -3,6 +3,7 @@ package com.example.qrwallet.ui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,6 +14,8 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -105,7 +108,6 @@ fun QRApp(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = 96.dp)
             ) {
                 if (cards.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -213,46 +215,66 @@ fun QRApp(
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 14.dp)
+                    .background(color = Color.White.copy(alpha = 0.0f))
             ) {
-                Row(
+                Surface(
+                    shape = RoundedCornerShape(30.dp),
+                    color = Color.White.copy(alpha = 0.04f),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.02f)),
                     modifier = Modifier
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Button(
-                        onClick = onScan,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = Color(0xFF5B6BFF),
-                            contentColor = Color.White
-                        ),
-                        elevation = ButtonDefaults.elevation(
-                            defaultElevation = 6.dp,
-                            pressedElevation = 0.dp
-                        )
-                    ) {
-                        Text("Scan QR", fontWeight = FontWeight.SemiBold)
-                    }
+                        .fillMaxWidth()
+                        .height(88.dp)
+                ) {}
 
-                    Button(
-                        onClick = onPickImage,
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = Color(0xFF0B1324).copy(alpha = 0.20f),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 10.dp)
+                ) {
+                    Row(
                         modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = Color(0xFF1FB7A4),
-                            contentColor = Color.White
-                        ),
-                        elevation = ButtonDefaults.elevation(
-                            defaultElevation = 6.dp,
-                            pressedElevation = 0.dp
-                        )
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text("Import file", fontWeight = FontWeight.SemiBold)
+                        Button(
+                            onClick = onScan,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(52.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = Color(0xFF5B6BFF),
+                                contentColor = Color.White
+                            ),
+                            elevation = ButtonDefaults.elevation(
+                                defaultElevation = 6.dp,
+                                pressedElevation = 0.dp
+                            )
+                        ) {
+                            Text("Scan QR", fontWeight = FontWeight.SemiBold)
+                        }
+
+                        Button(
+                            onClick = onPickImage,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(52.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = Color(0xFF1FB7A4),
+                                contentColor = Color.White
+                            ),
+                            elevation = ButtonDefaults.elevation(
+                                defaultElevation = 6.dp,
+                                pressedElevation = 0.dp
+                            )
+                        ) {
+                            Text("Import file", fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
             }
@@ -309,7 +331,7 @@ fun CardList(cards: List<Card>, onClick: (Card) -> Unit, onDelete: (Card) -> Uni
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(14.dp),
-        contentPadding = PaddingValues(bottom = 88.dp)
+        contentPadding = PaddingValues(bottom = 110.dp)
     ) {
         items(cards, key = { it.id }) { card ->
             CardRow(card = card, onClick = onClick, onDelete = onDelete, onReplace = onReplace)
