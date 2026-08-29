@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+
+    <!-- Three simple rounded rectangles fanned out to look like cards -->
+    <group
+        android:rotation="-20"
+        android:pivotX="50"
+        android:pivotY="50"
+        android:translateX="-6">
+        <path
+            android:fillColor="#FF7C9BFF"
+            android:pathData="M20,30 L80,30 L80,70 L20,70 Z" />
+    </group>
+
+    <group
+        android:rotation="-6"
+        android:pivotX="50"
+        android:pivotY="50"
+        android:translateX="-2">
+        <path
+            android:fillColor="#FF5B6BFF"
+            android:pathData="M22,26 L78,26 L78,66 L22,66 Z" />
+    </group>
+
+    <group
+        android:rotation="12"
+        android:pivotX="50"
+        android:pivotY="50"
+        android:translateX="6">
+        <path
+            android:fillColor="#FF1FB7A4"
+            android:pathData="M24,28 L76,28 L76,68 L24,68 Z" />
+    </group>
+
+    <!-- small highlight line on top card -->
+    <path
+        android:fillColor="#88FFFFFF"
+        android:pathData="M30,34 L70,34 L70,38 L30,38 Z" />
+
+</vector>
