@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Image
@@ -61,9 +62,35 @@ class MainActivity : AppCompatActivity() {
                 onScan = { startCameraScan() },
                 onPickImage = { pickImage() },
                 onBackup = { startExport() },
-                onRestore = { startImport() }
+                onRestore = { startImport() },
+                onShareWalletQr = { cards -> shareWalletQr(cards) }
             )
         }
+    }
+
+    private fun shareWalletQr(cards: List<Card>) {
+        if (cards.isEmpty()) return
+
+        val payload = SharedWalletPayload(
+            cards = cards.map { SharedWalletCard(title = it.title ?: "My Card", code = it.code ?: "", format = it.format) }
+        )
+        val qrPayload = "walletshare:v1:" + Gson().toJson(payload)
+        val bitmap = com.example.qrwallet.ui.generateQRCodeBitmap(qrPayload, 1200) ?: return
+
+        val walletDir = File(cacheDir, "wallet_share").apply { mkdirs() }
+        val imageFile = File(walletDir, "wallet-share-${System.currentTimeMillis()}.png")
+        FileOutputStream(imageFile).use { bitmap.compress(Bitmap.CompressFormat.PNG, 90, it) }
+
+        val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", imageFile)
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "image/png"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, "Wallet cards to import")
+            putExtra(Intent.EXTRA_TEXT, "Shared wallet cards")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        startActivity(Intent.createChooser(shareIntent, "Share wallet QR"))
     }
 
     private fun startExport() {

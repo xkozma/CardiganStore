@@ -27,7 +27,14 @@ import com.google.zxing.MultiFormatWriter
 import com.google.zxing.qrcode.QRCodeWriter
 
 @Composable
-fun QRApp(viewModel: CardViewModel, onScan: () -> Unit, onPickImage: () -> Unit, onBackup: () -> Unit, onRestore: () -> Unit) {
+fun QRApp(
+    viewModel: CardViewModel,
+    onScan: () -> Unit,
+    onPickImage: () -> Unit,
+    onBackup: () -> Unit,
+    onRestore: () -> Unit,
+    onShareWalletQr: (List<Card>) -> Unit
+) {
     val cards by viewModel.allCards.collectAsState(initial = emptyList())
     val selected by viewModel.selected.collectAsState()
     val pendingCard by viewModel.newCardDraft.collectAsState()
@@ -116,7 +123,14 @@ fun QRApp(viewModel: CardViewModel, onScan: () -> Unit, onPickImage: () -> Unit,
             }
 
             if (showWalletShare && cards.isNotEmpty()) {
-                ShareWalletDialog(cards = cards, onDismiss = { showWalletShare = false })
+                ShareWalletDialog(
+                    cards = cards,
+                    onDismiss = { showWalletShare = false },
+                    onShare = { selectedCards ->
+                        showWalletShare = false
+                        onShareWalletQr(selectedCards)
+                    }
+                )
             }
 
             if (pendingImportCards.isNotEmpty()) {
@@ -432,47 +446,96 @@ fun ImportWalletDialog(cards: List<Card>, onDismiss: () -> Unit, onConfirm: (Lis
 }
 
 @Composable
-fun ShareWalletDialog(cards: List<Card>, onDismiss: () -> Unit) {
-    val payload = remember(cards) {
-        WalletSharePayload(cards = cards.map {
-            WalletShareCard(
-                title = it.title ?: "My Card",
-                code = it.code ?: "",
-                format = it.format
-            )
-        })
+fun ShareWalletDialog(cards: List<Card>, onDismiss: () -> Unit, onShare: (List<Card>) -> Unit) {
+    val selected = remember(cards) {
+        mutableStateMapOf<Int, Boolean>().also { map ->
+            cards.indices.forEach { index -> map[index] = true }
+        }
     }
-    val qrJson = remember(payload) { Gson().toJson(payload) }
-    val qrPayload = remember(qrJson) { "walletshare:v1:" + qrJson }
-    val bitmap = remember(qrPayload) { generateQRCodeBitmap(qrPayload, 800) }
+
+    val selectedCards = cards.filterIndexed { index, _ -> selected[index] == true }
+    val payload = WalletSharePayload(cards = selectedCards.map {
+        WalletShareCard(
+            title = it.title ?: "My Card",
+            code = it.code ?: "",
+            format = it.format
+        )
+    })
+    val qrJson = Gson().toJson(payload)
+    val qrPayload = "walletshare:v1:" + qrJson
+    val bitmap = generateQRCodeBitmap(qrPayload, 800)
 
     Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = MaterialTheme.shapes.medium,
-            elevation = 8.dp,
-            modifier = Modifier.fillMaxWidth().padding(16.dp)
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f)),
+            contentAlignment = Alignment.Center
         ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                elevation = 10.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
             ) {
-                Text("Share wallet", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Scan this QR on another device to add the missing cards to their wallet.", color = Color.Gray)
-                Spacer(modifier = Modifier.height(16.dp))
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Share wallet", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Pick the cards to include, then save or send the QR.", color = Color.Gray)
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                if (bitmap != null) {
-                    Image(
-                        bitmap = bitmap.asImageBitmap(),
-                        contentDescription = "wallet sharing QR",
-                        modifier = Modifier.size(260.dp)
-                    )
-                } else {
-                    Text("Could not generate QR.")
+                    LazyColumn(modifier = Modifier.heightIn(max = 220.dp)) {
+                        items(cards.indices.toList()) { index ->
+                            val card = cards[index]
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = selected[index] == true,
+                                    onCheckedChange = { checked -> selected[index] = checked }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(card.title ?: "My Card")
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (bitmap != null && selectedCards.isNotEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .background(Color.White, shape = MaterialTheme.shapes.medium)
+                                .padding(12.dp)
+                        ) {
+                            Image(
+                                bitmap = bitmap.asImageBitmap(),
+                                contentDescription = "wallet sharing QR",
+                                modifier = Modifier.size(260.dp)
+                            )
+                        }
+                    } else {
+                        Text("Select at least one card to generate the QR.", color = Color.Gray)
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = onDismiss) { Text("Close") }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            enabled = selectedCards.isNotEmpty(),
+                            onClick = { onShare(selectedCards) }
+                        ) {
+                            Text("Save & share")
+                        }
+                    }
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = onDismiss) { Text("Done") }
             }
         }
     }
