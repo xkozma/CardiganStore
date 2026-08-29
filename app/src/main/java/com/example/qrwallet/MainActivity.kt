@@ -1,0 +1,382 @@
+package com.example.qrwallet
+
+import android.app.Activity
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.os.Bundle
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.activity.compose.setContent
+import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider
+import com.example.qrwallet.data.AppDatabase
+import com.example.qrwallet.data.Card
+import com.example.qrwallet.repo.CardRepository
+import com.example.qrwallet.ui.QRApp
+import com.google.gson.Gson
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.BinaryBitmap
+import com.google.zxing.DecodeHintType
+import com.google.zxing.MultiFormatReader
+import com.google.zxing.RGBLuminanceSource
+import com.google.zxing.common.HybridBinarizer
+// Camera scanning now handled by ScannerActivity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.InputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.util.UUID
+
+class MainActivity : AppCompatActivity() {
+    private lateinit var viewModel: com.example.qrwallet.viewmodel.CardViewModel
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        val db = AppDatabase.getInstance(applicationContext)
+        val repo = CardRepository(db.cardDao())
+        viewModel = ViewModelProvider(this, com.example.qrwallet.viewmodel.CardViewModelFactory(repo))
+            .get(com.example.qrwallet.viewmodel.CardViewModel::class.java)
+
+        setContent {
+            QRApp(
+                viewModel = viewModel,
+                onScan = { startCameraScan() },
+                onPickImage = { pickImage() },
+                onBackup = { startExport() },
+                onRestore = { startImport() }
+            )
+        }
+    }
+
+    private fun startExport() {
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/zip"
+            putExtra(Intent.EXTRA_TITLE, "qrwallet_backup.zip")
+        }
+        startActivityForResult(intent, EXPORT_REQUEST)
+    }
+
+    private fun startImport() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+        }
+        startActivityForResult(intent, IMPORT_REQUEST)
+    }
+
+    private fun startCameraScan() {
+        // Ensure camera permission
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.CAMERA), CAMERA_PERMISSION_REQUEST)
+            return
+        }
+        val intent = Intent(this, ScannerActivity::class.java)
+        startActivityForResult(intent, SCAN_REQUEST)
+    }
+
+    private fun pickImage() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT)
+        intent.type = "image/*"
+        startActivityForResult(intent, PICK_IMAGE)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == PICK_IMAGE && resultCode == Activity.RESULT_OK) {
+            val uri: Uri? = data?.data
+            uri?.let { handleImageUri(it) }
+            return
+        }
+
+        if (requestCode == SCAN_REQUEST && resultCode == Activity.RESULT_OK) {
+            val text = data?.getStringExtra(ScannerActivity.EXTRA_SCAN_RESULT)
+            val format = data?.getStringExtra(ScannerActivity.EXTRA_SCAN_FORMAT)
+            text?.trim()?.takeIf { it.isNotEmpty() }?.let { handleScannedText(it, format) }
+        }
+
+        if (requestCode == EXPORT_REQUEST && resultCode == Activity.RESULT_OK) {
+            val uri = data?.data ?: return
+            // write zip
+            try {
+                contentResolver.openOutputStream(uri)?.use { os ->
+                    val cards = viewModel.allCards.value
+                    BackupManager.writeBackup(cards, os)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        if (requestCode == IMPORT_REQUEST && resultCode == Activity.RESULT_OK) {
+            val uri = data?.data ?: return
+            try {
+                contentResolver.openInputStream(uri)?.use { ins ->
+                    val (backupCards, images) = BackupManager.readBackup(ins)
+                    // save images and insert cards
+                    for (b in backupCards) {
+                        var path: String? = null
+                        if (b.imageFilename != null && images.containsKey(b.imageFilename)) {
+                            val bytes = images[b.imageFilename]!!
+                            val file = File(filesDir, b.imageFilename)
+                            file.outputStream().use { it.write(bytes) }
+                            path = file.absolutePath
+                        }
+                        CoroutineScope(Dispatchers.IO).launch {
+                            viewModel.insert(Card(title = b.title, code = b.code, imagePath = path))
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == CAMERA_PERMISSION_REQUEST) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startCameraScan()
+            }
+        }
+    }
+
+    private fun handleImageUri(uri: Uri) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val bitmap = contentResolver.openInputStream(uri)?.use { input ->
+                    BitmapFactory.decodeStream(input)
+                } ?: run {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@MainActivity, "Could not read that image. Please try another photo.", Toast.LENGTH_SHORT).show()
+                    }
+                    return@launch
+                }
+
+                val decoded = decodeScannedValue(bitmap)
+                if (decoded == null) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@MainActivity, "No QR code found in that photo. Try a clear image of the QR itself.", Toast.LENGTH_SHORT).show()
+                    }
+                    return@launch
+                }
+
+                withContext(Dispatchers.Main) {
+                    handleScannedText(decoded.first, decoded.second)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, "Could not process the selected image.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun handleScannedText(text: String, detectedFormat: String? = null) {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return
+
+        val format = detectBarcodeFormat(trimmed, detectedFormat)
+        val walletPayloadText = when {
+            trimmed.startsWith(WALLET_SHARE_PREFIX) -> trimmed.removePrefix(WALLET_SHARE_PREFIX)
+            trimmed.startsWith("{") || trimmed.startsWith("[") -> trimmed
+            else -> null
+        }
+
+        if (walletPayloadText != null) {
+            try {
+                val payload = Gson().fromJson(walletPayloadText, SharedWalletPayload::class.java)
+                val existingCodes = viewModel.allCards.value.mapNotNull { it.code?.trim() }.map { it.lowercase() }
+                val newCards = payload.cards.orEmpty()
+                    .filter { !it.code.isNullOrBlank() }
+                    .filter { !existingCodes.contains(it.code!!.trim().lowercase()) }
+                    .map {
+                        val code = it.code!!.trim()
+                        val importedFormat = it.format?.trim()?.uppercase()?.takeIf { it == "QR" || it == "BARCODE" } ?: "QR"
+                        Card(
+                            title = it.title?.takeIf { title -> title.isNotBlank() } ?: "Shared Card",
+                            code = code,
+                            format = importedFormat
+                        )
+                    }
+
+                if (newCards.isEmpty()) {
+                    Toast.makeText(this, "You already have all cards in this wallet.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+
+                viewModel.queueImportCards(newCards)
+                return
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(this, "This QR does not contain a valid wallet export.", Toast.LENGTH_SHORT).show()
+                return
+            }
+        }
+
+        viewModel.queueNewCard(trimmed, defaultTitle = "Scanned Card", format = format)
+    }
+
+    private fun detectBarcodeFormat(value: String, detectedFormat: String? = null): String {
+        val clean = value.trim()
+        if (clean.isEmpty()) return "QR"
+
+        if (detectedFormat != null) {
+            return when (detectedFormat.uppercase()) {
+                "QR_CODE", "QR" -> "QR"
+                else -> "BARCODE"
+            }
+        }
+
+        return "QR"
+    }
+
+    private fun decodeScannedValue(bitmap: Bitmap): Pair<String, String>? {
+        val hints = mapOf(
+            DecodeHintType.TRY_HARDER to true,
+            DecodeHintType.POSSIBLE_FORMATS to listOf(
+                BarcodeFormat.QR_CODE,
+                BarcodeFormat.CODE_128,
+                BarcodeFormat.CODE_39,
+                BarcodeFormat.CODE_93,
+                BarcodeFormat.CODABAR,
+                BarcodeFormat.EAN_13,
+                BarcodeFormat.EAN_8,
+                BarcodeFormat.UPC_A,
+                BarcodeFormat.UPC_E,
+                BarcodeFormat.ITF,
+                BarcodeFormat.PDF_417,
+                BarcodeFormat.DATA_MATRIX
+            ),
+            DecodeHintType.CHARACTER_SET to "UTF-8"
+        )
+
+        val orientations = listOf(
+            bitmap,
+            rotateBitmap(bitmap, 90f),
+            rotateBitmap(bitmap, 180f),
+            rotateBitmap(bitmap, 270f)
+        )
+
+        val candidates = mutableListOf<Bitmap>()
+        for (image in orientations) {
+            candidates += image
+
+            val scaleFactors = listOf(0.5f, 1f, 1.5f, 2f, 3f)
+            for (scale in scaleFactors) {
+                val scaledW = maxOf(1, (image.width * scale).toInt())
+                val scaledH = maxOf(1, (image.height * scale).toInt())
+                candidates += Bitmap.createScaledBitmap(image, scaledW, scaledH, false)
+            }
+
+            val cropRatios = listOf(0.25f, 0.4f, 0.6f, 0.8f)
+            for (ratio in cropRatios) {
+                val cropW = maxOf(1, (image.width * ratio).toInt())
+                val cropH = maxOf(1, (image.height * ratio).toInt())
+                val regions = listOf(
+                    Pair(0, 0),
+                    Pair((image.width - cropW) / 2, (image.height - cropH) / 2),
+                    Pair(image.width - cropW, 0),
+                    Pair(0, image.height - cropH),
+                    Pair(image.width - cropW, image.height - cropH)
+                )
+
+                for ((x, y) in regions) {
+                    val clippedX = x.coerceIn(0, (image.width - cropW).coerceAtLeast(0))
+                    val clippedY = y.coerceIn(0, (image.height - cropH).coerceAtLeast(0))
+                    if (clippedX + cropW <= image.width && clippedY + cropH <= image.height) {
+                        candidates += Bitmap.createBitmap(image, clippedX, clippedY, cropW, cropH)
+                    }
+                }
+            }
+        }
+
+        for (candidate in candidates) {
+            val result = tryDecodeBitmap(candidate, hints)
+            if (result != null) return result.text to (result.barcodeFormat?.name ?: "QR")
+        }
+
+        return null
+    }
+
+    private fun decodeQrFromBitmap(bitmap: Bitmap): String? {
+        return decodeScannedValue(bitmap)?.first
+    }
+
+    private fun rotateBitmap(bitmap: Bitmap, degrees: Float): Bitmap {
+        val matrix = android.graphics.Matrix()
+        matrix.postRotate(degrees)
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+    }
+
+    private fun tryDecodeBitmap(bitmap: Bitmap, hints: Map<DecodeHintType, Any>): com.google.zxing.Result? {
+        return try {
+            val width = bitmap.width
+            val height = bitmap.height
+            if (width <= 0 || height <= 0) return null
+
+            val pixels = IntArray(width * height)
+            bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+            val source = RGBLuminanceSource(width, height, pixels)
+            val binaryBitmap = BinaryBitmap(HybridBinarizer(source))
+            val reader = MultiFormatReader()
+            reader.decode(binaryBitmap, hints)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun saveBitmapToInternalStorage(bitmap: android.graphics.Bitmap): String? {
+        return try {
+            val filename = "qr_" + UUID.randomUUID().toString() + ".png"
+            val file = File(filesDir, filename)
+            val out = FileOutputStream(file)
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 90, out)
+            out.flush()
+            out.close()
+            file.absolutePath
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    companion object {
+        private const val PICK_IMAGE = 201
+        private const val SCAN_REQUEST = 202
+        private const val CAMERA_PERMISSION_REQUEST = 301
+        private const val EXPORT_REQUEST = 401
+        private const val IMPORT_REQUEST = 402
+        private const val WALLET_SHARE_PREFIX = "walletshare:v1:"
+    }
+}
+
+private data class SharedWalletPayload(
+    val cards: List<SharedWalletCard>? = null
+)
+
+private data class SharedWalletCard(
+    val title: String? = null,
+    val code: String? = null,
+    val format: String? = null
+)
