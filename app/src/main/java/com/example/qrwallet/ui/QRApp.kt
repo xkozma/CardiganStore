@@ -487,19 +487,17 @@ fun CardDetail(card: Card, onClose: () -> Unit, onDelete: (Card) -> Unit, onSave
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.45f)),
+                .background(Color.Black.copy(alpha = 0.8f)),
             contentAlignment = Alignment.TopCenter
         ) {
             Surface(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 0.dp, vertical = 0.dp)
-                    .widthIn(max = 2000.dp),
-                shape = RoundedCornerShape(28.dp),
+                    .fillMaxSize(),
+                shape = RoundedCornerShape(0.dp),
                 color = Color(0xFF0F172A),
                 elevation = 18.dp
             ) {
-                Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(modifier = Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -899,18 +897,50 @@ private data class WalletShareCard(
 )
 
 fun generateCardBitmap(card: Card, size: Int): android.graphics.Bitmap? {
-    return if (card.format == "BARCODE") {
-        generateBarcodeBitmap(card.code ?: "", size)
-    } else {
-        generateQRCodeBitmap(card.code ?: "", size)
+    val fmt = card.format?.uppercase() ?: "QR"
+    return when {
+        fmt.contains("QR") -> generateQRCodeBitmap(card.code ?: "", size)
+        // Use explicit symbology names if stored (e.g., CODE_128, UPC_A, EAN_13)
+        fmt == "CODE_128" || fmt == "CODE128" -> generateBarcodeBitmap(card.code ?: "", size, com.google.zxing.BarcodeFormat.CODE_128)
+        fmt == "UPC_A" || fmt == "UPCA" -> generateBarcodeBitmap(card.code ?: "", size, com.google.zxing.BarcodeFormat.UPC_A)
+        fmt == "EAN_13" || fmt == "EAN13" -> generateBarcodeBitmap(card.code ?: "", size, com.google.zxing.BarcodeFormat.EAN_13)
+        fmt == "EAN_8" || fmt == "EAN8" -> generateBarcodeBitmap(card.code ?: "", size, com.google.zxing.BarcodeFormat.EAN_8)
+        else -> generateBarcodeBitmap(card.code ?: "", size)
     }
 }
 
 fun generateBarcodeBitmap(text: String, size: Int): android.graphics.Bitmap? {
     return try {
+        // Choose a barcode format based on content
+        // Heuristic fallback: choose EAN_13 for 13-digit numeric codes, otherwise CODE_128
         val format = if (text.length == 13 && text.all { it.isDigit() }) BarcodeFormat.EAN_13 else BarcodeFormat.CODE_128
         val writer = MultiFormatWriter()
-        val bitMatrix = writer.encode(text, format, size * 2, size / 2)
+        // Use stable dimensions that preserve module width. Barcodes are typically wider than tall.
+        val targetWidth = size.coerceAtLeast(400)
+        val targetHeight = (size / 3).coerceAtLeast(80)
+        val bitMatrix = writer.encode(text, format, targetWidth, targetHeight)
+        val width = bitMatrix.width
+        val height = bitMatrix.height
+        val bmp = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                bmp.setPixel(x, y, if (bitMatrix.get(x, y)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+            }
+        }
+        bmp
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
+
+// Overload that allows forcing a specific BarcodeFormat so we render the same symbology
+fun generateBarcodeBitmap(text: String, size: Int, format: com.google.zxing.BarcodeFormat): android.graphics.Bitmap? {
+    return try {
+        val writer = MultiFormatWriter()
+        val targetWidth = size.coerceAtLeast(400)
+        val targetHeight = (size / 3).coerceAtLeast(80)
+        val bitMatrix = writer.encode(text, format, targetWidth, targetHeight)
         val width = bitMatrix.width
         val height = bitMatrix.height
         val bmp = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)

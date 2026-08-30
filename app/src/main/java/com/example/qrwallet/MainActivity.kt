@@ -299,13 +299,12 @@ class MainActivity : AppCompatActivity() {
         val clean = value.trim()
         if (clean.isEmpty()) return "QR"
 
-        if (detectedFormat != null) {
-            return when (detectedFormat.uppercase()) {
-                "QR_CODE", "QR" -> "QR"
-                else -> "BARCODE"
-            }
+        // If scanner provided an exact format, preserve it (e.g., CODE_128, UPC_A, EAN_13)
+        if (!detectedFormat.isNullOrBlank()) {
+            return detectedFormat.uppercase()
         }
 
+        // Fallback: guess QR vs barcode based on content
         return "QR"
     }
 
