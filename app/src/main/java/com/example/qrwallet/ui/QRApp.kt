@@ -6,6 +6,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -13,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
@@ -60,6 +64,7 @@ fun QRApp(
     Scaffold(
         topBar = {
             TopAppBar(
+                modifier = Modifier.statusBarsPadding(),
                 backgroundColor = Color(0xFF0B1020),
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -89,8 +94,71 @@ fun QRApp(
                 elevation = 0.dp
             )
         },
+        bottomBar = {
+            Column(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(8.dp)) {
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = Color(0xFF0B1324).copy(alpha = 0.20f),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = onScan,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(52.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = Color(0xFF5B6BFF),
+                                contentColor = Color.White
+                            ),
+                            elevation = ButtonDefaults.elevation(
+                                defaultElevation = 6.dp,
+                                pressedElevation = 0.dp
+                            )
+                        ) {
+                            Text("Scan QR", fontWeight = FontWeight.SemiBold)
+                        }
+
+                        Button(
+                            onClick = onPickImage,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(52.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = Color(0xFF1FB7A4),
+                                contentColor = Color.White
+                            ),
+                            elevation = ButtonDefaults.elevation(
+                                defaultElevation = 6.dp,
+                                pressedElevation = 0.dp
+                            )
+                        ) {
+                            Text("Import file", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
+        },
         backgroundColor = Color(0xFF0B1020)
     ) { padding ->
+        val layoutDirection = LocalLayoutDirection.current
+        val adjustedPadding = PaddingValues(
+            start = padding.calculateStartPadding(layoutDirection),
+            top = padding.calculateTopPadding(),
+            end = padding.calculateEndPadding(layoutDirection),
+            bottom = 0.dp
+        )
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -103,7 +171,9 @@ fun QRApp(
                         )
                     )
                 )
-                .padding(padding)
+                // avoid applying Scaffold bottom padding so content can draw behind bottomBar;
+                // keep top/side padding from Scaffold but remove bottom inset
+                .padding(adjustedPadding)
         ) {
             Column(
                 modifier = Modifier
@@ -210,74 +280,7 @@ fun QRApp(
                 }
             }
 
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp)
-                    .background(color = Color.White.copy(alpha = 0.0f))
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(30.dp),
-                    color = Color.White.copy(alpha = 0.04f),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.02f)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(88.dp)
-                ) {}
-
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = Color(0xFF0B1324).copy(alpha = 0.20f),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 10.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Button(
-                            onClick = onScan,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(52.dp),
-                            shape = RoundedCornerShape(18.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                backgroundColor = Color(0xFF5B6BFF),
-                                contentColor = Color.White
-                            ),
-                            elevation = ButtonDefaults.elevation(
-                                defaultElevation = 6.dp,
-                                pressedElevation = 0.dp
-                            )
-                        ) {
-                            Text("Scan QR", fontWeight = FontWeight.SemiBold)
-                        }
-
-                        Button(
-                            onClick = onPickImage,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(52.dp),
-                            shape = RoundedCornerShape(18.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                backgroundColor = Color(0xFF1FB7A4),
-                                contentColor = Color.White
-                            ),
-                            elevation = ButtonDefaults.elevation(
-                                defaultElevation = 6.dp,
-                                pressedElevation = 0.dp
-                            )
-                        ) {
-                            Text("Import file", fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                }
-            }
+            // bottom action tray is provided by Scaffold.bottomBar; floating overlay removed
 
             pendingCard?.let { draft ->
                 NewCardDialog(
@@ -331,7 +334,8 @@ fun CardList(cards: List<Card>, onClick: (Card) -> Unit, onDelete: (Card) -> Uni
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(14.dp),
-        contentPadding = PaddingValues(bottom = 110.dp)
+        // Increase bottom padding so cards can scroll underneath the bottom action tray
+        contentPadding = PaddingValues(bottom = 160.dp)
     ) {
         items(cards, key = { it.id }) { card ->
             CardRow(card = card, onClick = onClick, onDelete = onDelete, onReplace = onReplace)

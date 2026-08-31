@@ -1,5 +1,7 @@
 package com.example.qrwallet
 
+import androidx.annotation.Keep
+
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
@@ -12,6 +14,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.activity.compose.setContent
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -51,6 +55,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Enable edge-to-edge drawing so Compose `statusBarsPadding()` / `navigationBarsPadding()` work
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        // Make status and navigation bars transparent so the app can draw behind them
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
 
         val db = AppDatabase.getInstance(applicationContext)
         val repo = CardRepository(db.cardDao())
@@ -259,7 +269,9 @@ class MainActivity : AppCompatActivity() {
                     .filter { !existingCodes.contains(it.code!!.trim().lowercase()) }
                     .map {
                         val code = it.code!!.trim()
-                        val importedFormat = it.format?.trim()?.uppercase()?.takeIf { it == "QR" || it == "BARCODE" } ?: "QR"
+                        // Preserve any explicit symbology name provided in the share payload
+                        // (e.g., CODE_128, UPC_A, EAN_13, QR). Fall back to QR when missing.
+                        val importedFormat = it.format?.trim()?.uppercase().takeUnless { it.isNullOrBlank() } ?: "QR"
                         Card(
                             title = it.title?.takeIf { title -> title.isNotBlank() } ?: "Shared Card",
                             code = code,
@@ -428,10 +440,12 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
+@Keep
 private data class SharedWalletPayload(
     val cards: List<SharedWalletCard>? = null
 )
 
+@Keep
 private data class SharedWalletCard(
     val title: String? = null,
     val code: String? = null,

@@ -5,14 +5,14 @@ plugins {
 }
 
 android {
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
-        applicationId "com.example.qrwallet"
+        applicationId "com.cardlet"
         minSdk 24
-        targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        targetSdk 35
+        versionCode 5
+        versionName "1.0.4"
     }
 
     compileOptions {
